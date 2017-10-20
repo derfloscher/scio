@@ -502,20 +502,8 @@ trait MultiJoin extends Serializable {
     }
   }
 
-  def apply[KEY: ClassTag, A: ClassTag, B: ClassTag](a: SCollection[(KEY, A)], b: SCollection[(KEY, B)]): SCollection[(KEY, (A, B))] = {
-    val (tagA, tagB) = (new TupleTag[A](), new TupleTag[B]())
-    val keyed = KeyedPCollectionTuple
-      .of(tagA, a.toKV.internal)
-      .and(tagB, b.toKV.internal)
-      .apply(s"CoGroupByKey@$tfName", CoGroupByKey.create())
-    a.context.wrap(keyed).withName(tfName).flatMap { kv =>
-      val (key, result) = (kv.getKey, kv.getValue)
-      for {
-        b <- result.getAll(tagB).asScala.iterator
-        a <- result.getAll(tagA).asScala.iterator
-      } yield (key, (a, b))
-    }
-  }
+  def apply[KEY: ClassTag, A: ClassTag, B: ClassTag](a: SCollection[(KEY, A)], b: SCollection[(KEY, B)]): SCollection[(KEY, (A, B))] =
+    ArtisanMultiJoin(tfName, a, b)
 
   def apply[KEY: ClassTag, A: ClassTag, B: ClassTag, C: ClassTag](a: SCollection[(KEY, A)], b: SCollection[(KEY, B)], c: SCollection[(KEY, C)]): SCollection[(KEY, (A, B, C))] = {
     val (tagA, tagB, tagC) = (new TupleTag[A](), new TupleTag[B](), new TupleTag[C]())
